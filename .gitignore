@@ -1,0 +1,6 @@
+node_modules
+dist
+.env
+*.local
+.claude/
+214c4ec711dc42d0b898228289639454.png
