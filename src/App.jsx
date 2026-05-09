@@ -89,7 +89,7 @@ function AppContent() {
           className="w-full flex justify-center"
         >
           <img
-            src="/promo-banner.png"
+            src={`${import.meta.env.BASE_URL}promo-banner.png`}
             alt="คุ้มค่า ล่าดาว Campaign Star"
             className="w-full max-w-2xl rounded-2xl shadow-lg object-cover"
             style={{ border: '1px solid rgba(255,215,0,0.2)' }}
