@@ -1,9 +1,17 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Telescope, Star, ChevronDown, ChevronUp, X, Search } from 'lucide-react'
+import { Telescope, Star, ChevronDown, ChevronUp, X, Search, TrendingDown, Banknote } from 'lucide-react'
 import { productMaster } from '../data/products'
 
 const PAGE_SIZE = 12
+
+const PRICE_CHIPS = [
+  { label: '≤ ฿20',       minP: '',    maxP: '20'  },
+  { label: '฿20–50',      minP: '20',  maxP: '50'  },
+  { label: '฿50–100',     minP: '50',  maxP: '100' },
+  { label: '฿100–500',    minP: '100', maxP: '500' },
+  { label: '≥ ฿500',      minP: '500', maxP: ''    },
+]
 
 function ResultCard({ product, memberType, starsFilter }) {
   const ambStars = product.ambStars
@@ -33,8 +41,9 @@ function ResultCard({ product, memberType, starsFilter }) {
       </div>
 
       {/* Price */}
-      <p className="text-xs t-muted">
-        ฿{product.pricePerPiece.toLocaleString('th-TH')} / {product.qtyUnit}
+      <p className="text-xs font-bold" style={{ color: '#FFD700' }}>
+        ฿{product.pricePerPiece.toLocaleString('th-TH')}
+        <span className="t-muted font-normal"> / {product.qtyUnit}</span>
       </p>
 
       {/* Star badges */}
@@ -65,6 +74,34 @@ function ResultCard({ product, memberType, starsFilter }) {
         )}
       </div>
 
+      {/* Savings */}
+      {(product.priceAfterAMB != null || product.priceAfterTMW != null) && (
+        <div className="flex flex-col gap-1">
+          {product.priceAfterAMB != null && product.pricePerPiece > product.priceAfterAMB && (
+            <div className="flex items-center justify-between text-xs">
+              <span className="flex items-center gap-1" style={{ color: 'rgba(255,215,0,0.7)' }}>
+                <TrendingDown className="w-3 h-3" />
+                ประหยัด AMB
+              </span>
+              <span className="font-bold" style={{ color: '#FFD700' }}>
+                ฿{+(product.pricePerPiece - product.priceAfterAMB).toFixed(2)}
+              </span>
+            </div>
+          )}
+          {product.priceAfterTMW != null && product.pricePerPiece > product.priceAfterTMW && (
+            <div className="flex items-center justify-between text-xs">
+              <span className="flex items-center gap-1" style={{ color: 'rgba(192,132,252,0.7)' }}>
+                <TrendingDown className="w-3 h-3" />
+                ประหยัด TMW
+              </span>
+              <span className="font-bold" style={{ color: '#c084fc' }}>
+                ฿{+(product.pricePerPiece - product.priceAfterTMW).toFixed(2)}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Promotion tag */}
       {product.promotion && (
         <p className="text-xs text-gold-500/60 leading-snug line-clamp-1">
@@ -79,30 +116,36 @@ export default function StarSearch({ memberType }) {
   const [minStars, setMinStars] = useState('')
   const [maxStars, setMaxStars] = useState('')
   const [nameFilter, setNameFilter] = useState('')
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
   const [page, setPage] = useState(1)
   const [isOpen, setIsOpen] = useState(true)
 
-  const min = parseInt(minStars) || 0
-  const max = parseInt(maxStars) || Infinity
+  const minS = parseInt(minStars) || 0
+  const maxS = parseInt(maxStars) || Infinity
+  const minP = parseFloat(minPrice) || 0
+  const maxP = parseFloat(maxPrice) || Infinity
+
+  const hasFilter = minStars || maxStars || nameFilter.trim() || minPrice || maxPrice
 
   const results = useMemo(() => {
-    if (!minStars && !maxStars && !nameFilter.trim()) return []
+    if (!hasFilter) return []
 
     return Object.values(productMaster).filter((p) => {
       const stars = memberType === 'AMB' ? p.ambStars : p.tmwStars
-      const starMatch = stars >= min && stars <= max && stars > 0
+      const starMatch = stars >= minS && stars <= maxS && stars > 0
+      const priceMatch = p.pricePerPiece >= minP && p.pricePerPiece <= maxP
       const nameMatch = !nameFilter.trim() ||
         p.name.toLowerCase().includes(nameFilter.trim().toLowerCase()) ||
         p.code.includes(nameFilter.trim())
-      return starMatch && nameMatch
+      return starMatch && priceMatch && nameMatch
     }).sort((a, b) => {
-      const aS = memberType === 'AMB' ? a.ambStars : a.tmwStars
+      const aS = memberType === 'AMB' ? a.ambStars : b.ambStars
       const bS = memberType === 'AMB' ? b.ambStars : b.tmwStars
       return bS - aS
     })
-  }, [minStars, maxStars, nameFilter, memberType])
+  }, [minStars, maxStars, nameFilter, minPrice, maxPrice, memberType, hasFilter, minS, maxS, minP, maxP])
 
-  const totalPages = Math.ceil(results.length / PAGE_SIZE)
   const paged = results.slice(0, page * PAGE_SIZE)
   const hasMore = paged.length < results.length
 
@@ -110,10 +153,36 @@ export default function StarSearch({ memberType }) {
     setMinStars('')
     setMaxStars('')
     setNameFilter('')
+    setMinPrice('')
+    setMaxPrice('')
     setPage(1)
   }
 
-  const hasFilter = minStars || maxStars || nameFilter.trim()
+  // check active star chip
+  function isStarChipActive(chip) {
+    return minStars === chip.min && maxStars === chip.max && !nameFilter
+  }
+
+  // check active price chip
+  function isPriceChipActive(chip) {
+    return minPrice === chip.minP && maxPrice === chip.maxP
+  }
+
+  const chipBase = {
+    background: 'var(--c-chip)',
+    border: '1px solid var(--c-chip-border)',
+    color: 'var(--c-btn-sec-text)',
+  }
+  const chipActiveGold = {
+    background: 'rgba(255,215,0,0.2)',
+    border: '1px solid rgba(255,215,0,0.4)',
+    color: '#FFD700',
+  }
+  const chipActiveGreen = {
+    background: 'rgba(34,197,94,0.15)',
+    border: '1px solid rgba(34,197,94,0.35)',
+    color: '#4ade80',
+  }
 
   return (
     <motion.div
@@ -171,49 +240,40 @@ export default function StarSearch({ memberType }) {
             className="overflow-hidden"
           >
             <div className="flex flex-col gap-4 pt-1">
-              {/* Filter row */}
+
+              {/* ── Star filters ── */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Min stars */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs uppercase tracking-widest t-label font-medium flex items-center gap-1">
                     <Star className="w-3 h-3 text-gold-500" />
                     ดาวขั้นต่ำ
                   </label>
                   <input
-                    type="number"
-                    min={0}
-                    value={minStars}
+                    type="number" min={0} value={minStars}
                     onChange={(e) => { setMinStars(e.target.value); setPage(1) }}
                     placeholder="เช่น 10"
                     className="neu-input px-3 py-2.5 text-sm"
                   />
                 </div>
-
-                {/* Max stars */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs uppercase tracking-widest t-label font-medium flex items-center gap-1">
                     <Star className="w-3 h-3 text-gold-500" />
                     ดาวสูงสุด
                   </label>
                   <input
-                    type="number"
-                    min={0}
-                    value={maxStars}
+                    type="number" min={0} value={maxStars}
                     onChange={(e) => { setMaxStars(e.target.value); setPage(1) }}
                     placeholder="เช่น 50"
                     className="neu-input px-3 py-2.5 text-sm"
                   />
                 </div>
-
-                {/* Name / code search */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs uppercase tracking-widest t-label font-medium flex items-center gap-1">
                     <Search className="w-3 h-3 text-gold-500" />
                     ชื่อ / รหัสสินค้า
                   </label>
                   <input
-                    type="text"
-                    value={nameFilter}
+                    type="text" value={nameFilter}
                     onChange={(e) => { setNameFilter(e.target.value); setPage(1) }}
                     placeholder="เช่น นม, โค้ก..."
                     className="neu-input px-3 py-2.5 text-sm"
@@ -221,59 +281,82 @@ export default function StarSearch({ memberType }) {
                 </div>
               </div>
 
-              {/* Quick filter chips */}
-              <div className="flex flex-wrap gap-2">
-                <span className="text-xs t-faint self-center">ค้นเร็ว:</span>
-                {[
-                  { label: '10 ดาว', min: '10', max: '10' },
-                  { label: '≥ 15 ดาว', min: '15', max: '' },
-                  { label: '≥ 30 ดาว', min: '30', max: '' },
-                  { label: '≥ 100 ดาว', min: '100', max: '' },
-                  { label: '1–5 ดาว', min: '1', max: '5' },
-                  { label: 'ทั้งหมด', min: '1', max: '' },
-                ].map((chip) => (
-                  <button
-                    key={chip.label}
-                    onClick={() => {
-                      setMinStars(chip.min)
-                      setMaxStars(chip.max)
-                      setNameFilter('')
-                      setPage(1)
-                    }}
-                    className="px-3 py-1 rounded-full text-xs font-medium transition-all"
-                    style={{
-                      background:
-                        minStars === chip.min && maxStars === chip.max && !nameFilter
-                          ? 'rgba(255,215,0,0.2)'
-                          : 'var(--c-chip)',
-                      border:
-                        minStars === chip.min && maxStars === chip.max && !nameFilter
-                          ? '1px solid rgba(255,215,0,0.4)'
-                          : '1px solid var(--c-chip-border)',
-                      color:
-                        minStars === chip.min && maxStars === chip.max && !nameFilter
-                          ? '#FFD700'
-                          : 'var(--c-btn-sec-text)',
-                    }}
-                  >
-                    {chip.label}
-                  </button>
-                ))}
+              {/* ── Price filters ── */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs uppercase tracking-widest t-label font-medium flex items-center gap-1">
+                    <Banknote className="w-3 h-3 text-green-500" />
+                    ราคาขั้นต่ำ (฿)
+                  </label>
+                  <input
+                    type="number" min={0} value={minPrice}
+                    onChange={(e) => { setMinPrice(e.target.value); setPage(1) }}
+                    placeholder="เช่น 20"
+                    className="neu-input px-3 py-2.5 text-sm"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs uppercase tracking-widest t-label font-medium flex items-center gap-1">
+                    <Banknote className="w-3 h-3 text-green-500" />
+                    ราคาสูงสุด (฿)
+                  </label>
+                  <input
+                    type="number" min={0} value={maxPrice}
+                    onChange={(e) => { setMaxPrice(e.target.value); setPage(1) }}
+                    placeholder="เช่น 500"
+                    className="neu-input px-3 py-2.5 text-sm"
+                  />
+                </div>
+              </div>
 
-                {hasFilter && (
-                  <button
-                    onClick={reset}
-                    className="px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 transition-all"
-                    style={{
-                      background: 'rgba(239,68,68,0.08)',
-                      border: '1px solid rgba(239,68,68,0.2)',
-                      color: 'rgba(248,113,113,0.8)',
-                    }}
-                  >
-                    <X className="w-3 h-3" />
-                    ล้าง
-                  </button>
-                )}
+              {/* ── Quick filter chips: Stars ── */}
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-xs t-faint">ดาว:</span>
+                  {[
+                    { label: '10 ดาว', min: '10', max: '10' },
+                    { label: '≥ 15 ดาว', min: '15', max: '' },
+                    { label: '≥ 30 ดาว', min: '30', max: '' },
+                    { label: '≥ 100 ดาว', min: '100', max: '' },
+                    { label: '1–5 ดาว', min: '1', max: '5' },
+                    { label: 'ทั้งหมด', min: '1', max: '' },
+                  ].map((chip) => (
+                    <button
+                      key={chip.label}
+                      onClick={() => { setMinStars(chip.min); setMaxStars(chip.max); setNameFilter(''); setPage(1) }}
+                      className="px-3 py-1 rounded-full text-xs font-medium transition-all"
+                      style={isStarChipActive(chip) ? chipActiveGold : chipBase}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* ── Quick filter chips: Price ── */}
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-xs t-faint">ราคา:</span>
+                  {PRICE_CHIPS.map((chip) => (
+                    <button
+                      key={chip.label}
+                      onClick={() => { setMinPrice(chip.minP); setMaxPrice(chip.maxP); setPage(1) }}
+                      className="px-3 py-1 rounded-full text-xs font-medium transition-all"
+                      style={isPriceChipActive(chip) ? chipActiveGreen : chipBase}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+
+                  {hasFilter && (
+                    <button
+                      onClick={reset}
+                      className="px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 transition-all"
+                      style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: 'rgba(248,113,113,0.8)' }}
+                    >
+                      <X className="w-3 h-3" />
+                      ล้าง
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Member type note */}
@@ -308,7 +391,7 @@ export default function StarSearch({ memberType }) {
                           key={product.code}
                           product={product}
                           memberType={memberType}
-                          starsFilter={min}
+                          starsFilter={minS}
                         />
                       ))}
                     </AnimatePresence>
@@ -322,11 +405,7 @@ export default function StarSearch({ memberType }) {
                   <button
                     onClick={() => setPage((p) => p + 1)}
                     className="px-6 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                    style={{
-                      background: 'rgba(255,215,0,0.08)',
-                      border: '1px solid rgba(255,215,0,0.25)',
-                      color: '#FFD700',
-                    }}
+                    style={{ background: 'rgba(255,215,0,0.08)', border: '1px solid rgba(255,215,0,0.25)', color: '#FFD700' }}
                   >
                     โหลดเพิ่ม ({results.length - paged.length} รายการ)
                   </button>

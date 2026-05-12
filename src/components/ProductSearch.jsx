@@ -32,6 +32,7 @@ export default function ProductSearch({
       ...starData,
       cumulativeBalance: currentBalance,
       promotion: foundProduct.promotion || null,
+      timestamp: new Date().toISOString(),
     }
 
     addEntry(entry)

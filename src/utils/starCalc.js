@@ -1,29 +1,32 @@
 /**
- * Calculate stars earned for a purchase.
- *
- * Stars are FIXED per product (sourced from Star.xlsx columns I & J).
- * Formula: totalStars = starRatePerUnit × quantity
- *
- * @param {object} product    productMaster entry
- * @param {number} quantity   number of purchase units
- * @param {'AMB'|'TMW'} memberType
+ * Stars per product come from ดาว AMB / ดาว TMW columns (Star Patinum.xlsx).
+ * Savings = ราคาปกติ − ราคาหลังหักดาว AMB / TRUE
  */
 export function calculateStars(product, quantity, memberType) {
   const ratePerUnit = memberType === 'AMB' ? product.ambStars : product.tmwStars
   const starsEarned = ratePerUnit * quantity
   const totalPrice = product.pricePerPiece * quantity
 
+  const savingsAMB =
+    product.priceAfterAMB != null
+      ? +(product.pricePerPiece - product.priceAfterAMB).toFixed(2)
+      : null
+
+  const savingsTMW =
+    product.priceAfterTMW != null
+      ? +(product.pricePerPiece - product.priceAfterTMW).toFixed(2)
+      : null
+
   return {
     starsEarned,
     ratePerUnit,
     totalPrice,
+    savingsAMB,
+    savingsTMW,
     hasPromotion: Boolean(product.promotion),
   }
 }
 
-/**
- * Sum all stars from a diary array.
- */
 export function accumulatedStars(diary) {
   return diary.reduce((sum, entry) => sum + (entry.starsEarned || 0), 0)
 }

@@ -1,10 +1,10 @@
 import { useRef } from 'react'
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion'
-import { Package, Tag, Hash, ShoppingCart, Zap } from 'lucide-react'
+import { Package, Tag, Hash, ShoppingCart, Zap, TrendingDown } from 'lucide-react'
 import StarDisplay from './StarDisplay'
 import { calculateStars } from '../utils/starCalc'
 
-function InfoRow({ icon: Icon, label, value, highlight }) {
+function InfoRow({ icon: Icon, label, value, highlight, accent }) {
   return (
     <div className="flex items-start gap-3 py-2.5 border-b last:border-0" style={{ borderColor: 'var(--c-entry-border)' }}>
       <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
@@ -13,9 +13,35 @@ function InfoRow({ icon: Icon, label, value, highlight }) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs t-label uppercase tracking-wide">{label}</p>
-        <p className={`text-sm font-semibold mt-0.5 leading-snug ${highlight ? 'text-gold-400' : 't-text'}`}>
+        <p className={`text-sm font-semibold mt-0.5 leading-snug ${highlight ? 'text-gold-400' : accent ? accent : 't-text'}`}>
           {value}
         </p>
+      </div>
+    </div>
+  )
+}
+
+function SavingsRow({ label, priceAfter, savings, accentColor, borderColor }) {
+  if (priceAfter == null) return null
+  return (
+    <div
+      className="flex items-center justify-between px-3 py-2 rounded-xl"
+      style={{ background: `rgba(${accentColor},0.06)`, border: `1px solid rgba(${accentColor},0.2)` }}
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        <TrendingDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: `rgb(${accentColor})` }} />
+        <span className="text-xs font-medium truncate" style={{ color: `rgb(${accentColor})` }}>{label}</span>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+        <span className="text-xs t-muted">฿{priceAfter.toLocaleString('th-TH')}</span>
+        {savings != null && savings > 0 && (
+          <span
+            className="text-xs font-bold px-2 py-0.5 rounded-full"
+            style={{ background: `rgba(${accentColor},0.15)`, color: `rgb(${accentColor})`, border: `1px solid rgba(${accentColor},0.3)` }}
+          >
+            ประหยัด ฿{savings.toLocaleString('th-TH')}
+          </span>
+        )}
       </div>
     </div>
   )
@@ -120,8 +146,8 @@ export default function LivePreviewCard({ foundProduct, productCode, quantity, m
           <InfoRow icon={Tag} label="หน่วยซื้อ" value={foundProduct.qtyUnit} />
           <InfoRow
             icon={Tag}
-            label="ราคา/ชิ้น"
-            value={`฿${foundProduct.pricePerPiece.toLocaleString('th-TH')}${foundProduct.specialPrice ? ` (พิเศษ: ฿${foundProduct.specialPrice.toLocaleString('th-TH')}/ชุด)` : ''}`}
+            label="ราคาปกติ/ชิ้น"
+            value={`฿${foundProduct.pricePerPiece.toLocaleString('th-TH')}`}
             highlight
           />
           <InfoRow
@@ -129,6 +155,35 @@ export default function LivePreviewCard({ foundProduct, productCode, quantity, m
             label="จำนวน × ราคารวม"
             value={`${quantity} หน่วย = ฿${starData.totalPrice.toLocaleString('th-TH')}`}
           />
+
+          {/* Savings section */}
+          {(foundProduct.priceAfterAMB != null || foundProduct.priceAfterTMW != null) && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="mt-1 flex flex-col gap-2"
+            >
+              <p className="text-xs t-label uppercase tracking-wide flex items-center gap-1.5 mt-1">
+                <TrendingDown className="w-3.5 h-3.5 text-gold-500" />
+                ผลประหยัดจากดาว
+              </p>
+
+              <SavingsRow
+                label={`ผลประหยัดจากดาว AMB (${foundProduct.ambStars} ดาว)`}
+                priceAfter={foundProduct.priceAfterAMB}
+                savings={starData.savingsAMB}
+                accentColor="255,215,0"
+              />
+
+              <SavingsRow
+                label={`ผลประหยัดจากดาว TMW (${foundProduct.tmwStars} ดาว)`}
+                priceAfter={foundProduct.priceAfterTMW}
+                savings={starData.savingsTMW}
+                accentColor="192,132,252"
+              />
+            </motion.div>
+          )}
 
           {/* Promotion badge */}
           {foundProduct.promotion && (

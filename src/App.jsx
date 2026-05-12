@@ -148,7 +148,7 @@ function AppContent() {
           className="text-center pb-4"
         >
           <p className="text-xs t-faint">
-            Campaign Star Loyalty System · {Object.keys(productMaster).length.toLocaleString('th-TH')} สินค้า · พ.ค. 2569
+            Campaign Star Loyalty System · {Object.keys(productMaster).length.toLocaleString('th-TH')} สินค้า · พ.ค. 2569 · ข้อมูลจาก Star Patinum.xlsx
           </p>
         </motion.div>
 
